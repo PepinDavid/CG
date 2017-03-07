@@ -265,6 +265,7 @@ class MyPod : public Pod
             else
                 m_thrust = 45, checkAngle();
         }
+        //calcul des données
         void purchase()
         {
             calculSpeed();
@@ -274,23 +275,24 @@ class MyPod : public Pod
             nextTarget();
             
         }
+        //recherche de la trajectoire
         void seek()
         {            
-            float m_speed = m_speedInstant.normal(), 
-            MAX_FORCE = (m_thrust / 100) +2.0;
-            Vector2D steering, 
-            desired = m_coordsTarget, 
-            velocity(-m_speedInstant.x(), -m_speedInstant.y());
-            desired.setSub(m_coords);            
-            desired.normal(m_speed);
-            steering = desired.setSub(velocity);
-            steering.normal(MAX_FORCE);            
-            velocity = desired.setAdd(steering);
-            velocity.normal(m_speed);
-            desired.setAdd(velocity);
-            m_coords.setAdd(desired);  
-            
+            float m_speed = m_speedInstant.normal(),//normalisation du vecteur vitesse
+            MAX_FORCE = (m_thrust / 100) + 2.0;//calcule de la force centrifuge
+            Vector2D steering,//direction
+            desired = m_coordsTarget,//direction desirée
+            velocity(-m_speedInstant.x(), -m_speedInstant.y());//velocité de la vitesse instannée
+            desired.setSub(m_coords);//on soustrait notre position à la position desirée
+            desired.normal(m_speed);//normalisation de la vitesse desirée par rapport a la vitesse instannée
+            steering = desired.setSub(velocity); //calcule de la direction désirée
+            steering.normal(MAX_FORCE);//normalisation du vecteur par rapport a la force centrigue
+            velocity = desired.setAdd(steering); //on ajoute a la direction désirée
+            velocity.normal(m_speed);//on normalise par rapport a la vitesse instannée
+            desired.setAdd(velocity);//on ajout la velocité a la direction désiré
+            m_coords.setAdd(desired);//on change nos coordonnées avec la nouvelle trajectoire
         }
+        //calcul de la vitesse instannée
         void calculSpeed()
         {       
             //coeff friction
@@ -303,35 +305,44 @@ class MyPod : public Pod
                 m_lastCoords.setVector2D(m_coords.x() * friction, m_coords.y() * friction);
             }                                    
         }
+        //calcul de la distance entre le Pod et la cible
         void calculDist(){
             if(m_coordsTarget.x() != m_lastTarget.x() || m_coordsTarget.y() != m_lastTarget.y())
                 m_dist = m_coords.distance(m_coordsTarget);
             else         
                 m_lastTarget = m_coordsTarget;
         }
+        //sert a visé le prochain checkpoint si on est assez près de celui
         void nextTarget(){
             int index = 0;
+            //si il y a des checkpoints dans le tableau
             if(m_targetsCoords.size() > 0){
                 for(int i = 0; i < m_targetsCoords.size(); i++){
+                    //si les coordonnées du checkpoints correspondent a celles visées
+                    //on sélectionne le prochain
                     if(m_targetsCoords[i].x() == m_coordsTarget.x() 
                         && m_targetsCoords[i].y() == m_coordsTarget.y())
                             index = i+1;
                 }
             }
-            
+            //ajout de 2 tours a lap vu que l'on commence a zéro
             if(m_targetsCoords[index].x() > 0 && m_targetsCoords[0].x() == m_coordsTarget.x())
-                m_lap = 1; 
-            
+                m_lap = 2; 
+            //if on a déjà procédé a un tour et que l'on est proche du checkpoint visé
+            //1450 est choisi comme valeur d'approche avec un checkpoint correspond a 600 et le Pod fait 400
+            //avec la vitesse du pod lors de l'approche on ajoute 450
             if(m_lap && m_nextCheckPointDist <= 1450){
                 if(index >= m_targetsCoords.size())
                     index = 0;
-                
+                //si on est pas en timeout on vise le prochain prochain checkpoint
+                // et on calcul le futur angle d'approche pour ralentir
                 if(m_timeout >= 65){
                     m_coordsTarget.setVector2D(m_targetsCoords[index].x(), m_targetsCoords[index].y());
                     rotate(m_targetsCoords[index]);
                 }
             }  
         }
+        //ajout des checkpoints dans un tableau
         void checkTargets(){
             if(!m_lap){
                 if(m_targetsCoords.size() < 1)
@@ -347,6 +358,7 @@ class MyPod : public Pod
                 }
             }
         }
+        //check si on a passé un checkpoint et réinit du timeout
         void changeTarget(){
             if(m_actualTarget.x() == 0 && m_actualTarget.y() == 0)
                 m_actualTarget.setVector2D(m_coordsTarget.x(), m_coordsTarget.y());
@@ -359,6 +371,7 @@ class MyPod : public Pod
                 setLap();
             }
         }
+        //check des tours du circuit
         void setLap(){
             if(m_lap)
                 if(m_targetsCoords[m_targetsCoords.size()-1].x() == m_coordsTarget.x())

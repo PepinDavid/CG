@@ -8,6 +8,9 @@ using namespace std;
 
 #define PI 3.14159265
 #define EPSILON 0.00000001
+//class Vector2D
+//sert à init points coords des Pod et des checkpoints
+//et pour les calcules de vecteurs
 class Vector2D
 {
     protected:
@@ -20,7 +23,6 @@ class Vector2D
             m_y = y;
         }
         ~Vector2D(){}
-        //update class
         void setVector2D(float x = 0.0, float y = 0.0)
         {
             m_x = x;
@@ -34,12 +36,10 @@ class Vector2D
         {
             return m_y;
         }
-        //update attr m_x
         void setX(float x)
         {
             m_x = x;
         }
-        //update attr m_y
         void setY(float y)
         {
             m_y = y;
@@ -147,144 +147,140 @@ class Vector2D
         }
 };
 
-class Unit : public Vector2D
-{
-    protected:
-        int id;
-        Vector2D m_coords;
-        Vector2D m_vitesse;
-        float r;
-    public:
-        Unit(){}
-        ~Unit(){}
-};
-
-class Target : public Vector2D
-{
-    protected:
-        float r;
-    public:
-        Target(float x = 0.0, float y = 0.0)
-        {
-            Vector2D(x, y);
-            r = 600.00;
-        }
-        ~Target(){}
-};
-
 class Pod : public Vector2D
 {
     protected:
+        //nos coordonnées
         Vector2D m_coords;
+        //nos anciens coordonnées
         Vector2D m_lastCoords;
-        float m_angle;
     public:
         Pod()
         {
-            //coords instant
             m_coords.setVector2D(0.0, 0.0);        
-            //coords last position
-            m_lastCoords.setVector2D(0.0, 0.0);            
-            m_angle = 0.0;
+            m_lastCoords.setVector2D(0.0, 0.0);     
+            
         }
         ~Pod(){}
         void setPod(float x = 0.0, float y = 0.0)
         {
-            m_coords.setVector2D(x, y);          
+            m_coords.setVector2D(x, y);
         }
 };
 
 class MyPod : public Pod
 {
-    protected:
+    protected:        
+        //coordonées de la cible
         Vector2D m_coordsTarget;
+        //sert a checké si on est passé par un checkpoint
+        Vector2D m_actualTarget;
         Vector2D m_lastTarget;
         Vector2D m_speedInstant;
-        
-        float m_nextCheckPointDist;
-        float m_nextCheckPointAngle;
+        vector<Vector2D> m_targetsCoords;
+        //angle vers la cible
+        float m_angle;
+        /*
+            distance vers la cible 
+            un calcul est fait
+            dist == m_nextCheckPointDist
+        */
         float m_dist;
+        //timeout game
+        int m_timeout;
+        //nombre de tours
+        int m_lap = 0;
+        //distance vers la cible données en entrée
+        float m_nextCheckPointDist;
+        //angle vers la cible données en entrée
+        float m_nextCheckPointAngle;
+        
         int m_thrust;
         bool m_boost;
     public:
-        MyPod() : Pod()
-        {            
-            //coords target
+        MyPod() : Pod() //appelle du constructeur Pod
+        {         
             m_coordsTarget.setVector2D(0.0, 0.0);
-            //different speed
-            m_speedInstant.setVector2D(0.0, 0.0); //instant speed on X and Y
-            
+            m_speedInstant.setVector2D(0.0, 0.0);
+            m_actualTarget.setVector2D(0.0, 0.0);            
             m_nextCheckPointDist = 0.0;
             m_nextCheckPointAngle = 0.0;
             m_thrust = 100;
             m_boost = true;
         }
         ~MyPod(){}
+        //init Pod avec les entrées
         void setPod(float x = 0.0, float y = 0.0, float targetX = 0.0, float targetY = 0.0, float nextCheckPointD = 0.0, float nextCheckPointAngle = 0.0)
         {            
-            Pod::setPod(x, y);
-            m_coordsTarget.setVector2D(targetX, targetY);                
+            Pod::setPod(x, y);            
+            m_coordsTarget.setVector2D(targetX, targetY);
             m_nextCheckPointDist = nextCheckPointD;
             m_nextCheckPointAngle = nextCheckPointAngle;
+            m_angle = nextCheckPointAngle;
             m_thrust = 100;
+            checkTargets();
             purchase();
             seek();
-            //output();
         }
-        void setThrust()
-        { 
-            if(m_nextCheckPointAngle >= 130 || m_nextCheckPointAngle <= -130){
-                m_thrust = 0;
-            }else if(m_nextCheckPointAngle >= 90 || m_nextCheckPointAngle <= -90){
-                m_thrust = 50;
-            }else{
-                if(m_dist <= 3000 && m_nextCheckPointDist <= 2300)
-                    m_thrust = 75;
-                else if(m_dist > 3000 && m_dist < 6000  && m_nextCheckPointDist <= 2300)
-                    m_thrust = 40;
-                else if(m_dist >= 6000  && m_nextCheckPointDist <= 2300)
-                    m_thrust = 70;
-                else
-                    m_thrust = 100;
-            }   
+        //donne la sortie et des infos
+        void output(int x, int y)
+        {
+            cerr << "timeout " << m_timeout << endl;
+            cerr << "lap : " << m_lap << endl;
+            cerr << "X et Y : " << m_coords.x() << " " << m_coords.y() <<  endl;
+            cerr << "Thrust : " << m_thrust<< endl;
+            cerr << "Tx : " << m_coordsTarget.x() << ", Ty : " << m_coordsTarget.y() << endl;
+            cerr << "Angle calculé : " << m_angle << endl;
+            cerr << "Distance calculé : " << m_dist << endl;
+            if(m_thrust < 30 && m_thrust > -30)
+                m_thrust = 30;
+                
+            if(m_boost)
+                goBoost(x,y);
+                
+            cout << (int)m_coords.x() << " " << (int)m_coords.y() << " " << abs(m_thrust) << endl;
+            
         }
+    private:
+        //check l'angle vers la cible et met la poussé
         void checkAngle()
         {
-            if(m_nextCheckPointAngle >= 180 || m_nextCheckPointAngle <= -180){
-                m_thrust = 0;
-            }else if(m_nextCheckPointAngle >= 90 || m_nextCheckPointAngle <= -90){
-                m_thrust /= 2;
-            }else if(m_nextCheckPointAngle >= 45 || m_nextCheckPointAngle <= -45){ 
-                m_thrust = (m_thrust / m_nextCheckPointAngle)*10;
+            if(m_angle >= 130 || m_angle <= -130){
+                    m_thrust = 30;
+            }else if(m_angle >= 90 || m_angle <= -90){
+                m_thrust = (m_thrust / m_angle)*15;
+            }else if(m_angle >= 5 || m_angle <= -5){
+                m_thrust = 90;
+            }else if(m_angle < 5 || m_angle > -5){
+                m_thrust = 100;
             }
         }
+        //check la distance vers la cible et met la poussé
         void checkDistance()
-        {
-            if(m_dist <= 3000 && m_nextCheckPointDist <= 2300)
-                m_thrust = 80, checkAngle();
-            else if(m_dist > 3000 && m_dist < 6000  && m_nextCheckPointDist <= 2300)
-                m_thrust = 40, checkAngle();
-            else if(m_dist >= 6000  && m_nextCheckPointDist <= 2300)
+        {            
+            if(m_nextCheckPointDist > 2300)
+                m_thrust = 100, checkAngle();
+            else if(m_nextCheckPointDist <= 2300 && m_nextCheckPointDist > 1400)
                 m_thrust = 75, checkAngle();
             else
-                m_thrust = 100;
+                m_thrust = 45, checkAngle();
         }
         void purchase()
         {
             calculSpeed();
-            setThrust();
-            cerr << "X et Y : " << m_coords.x() << " " << m_coords.y() <<  endl;
-            cerr << "Thrust : " << m_thrust<< endl;
-            cerr << "Tx : " << m_coordsTarget.x() << ", Ty : " << m_coordsTarget.y() << endl;
-            cerr << "Angle : " << m_nextCheckPointAngle << endl;
-            cerr << "Distance : " << m_nextCheckPointDist << endl;
-            cerr << "Distance calculé : " << m_dist << endl;
-                        
+            calculDist();
+            checkDistance();   
+            changeTarget();
+            nextTarget();
+            
         }
         void seek()
         {            
-            float m_speed = m_speedInstant.normal(), MAX_FORCE = (m_thrust / 100) +2.0;
-            Vector2D steering, desired = m_coordsTarget, velocity(-m_speedInstant.x(), -m_speedInstant.y()), position;
+            float m_speed = m_speedInstant.normal(), 
+            MAX_FORCE = (m_thrust / 100) +2.0;
+            Vector2D steering, 
+            desired = m_coordsTarget, 
+            velocity(-m_speedInstant.x(), -m_speedInstant.y());
             desired.setSub(m_coords);            
             desired.normal(m_speed);
             steering = desired.setSub(velocity);
@@ -296,45 +292,148 @@ class MyPod : public Pod
             
         }
         void calculSpeed()
-        {            
+        {       
+            //coeff friction
+            float friction = 0.85;
+            //tours entre coords actuelle et les anciennes 
+            int rd = 2;
             if(m_coords.x() != m_lastCoords.x() || m_coords.y() != m_lastCoords.y())
             {
-                m_speedInstant.setX((m_coords.x() - m_lastCoords.x()) / 2);
-                m_speedInstant.setY((m_coords.y() - m_lastCoords.y()) / 2); 
-                m_lastCoords.setX(m_coords.x()*0.85);
-                m_lastCoords.setY(m_coords.y()*0.85);
-            }
-            
-            //ne va pas !!!
+                m_speedInstant.setVector2D((m_coords.x() - m_lastCoords.x()) / rd, (m_coords.y() - m_lastCoords.y()) / rd);
+                m_lastCoords.setVector2D(m_coords.x() * friction, m_coords.y() * friction);
+            }                                    
+        }
+        void calculDist(){
             if(m_coordsTarget.x() != m_lastTarget.x() || m_coordsTarget.y() != m_lastTarget.y())
-            {
-                m_dist = m_lastTarget.distance(m_coordsTarget);
-                m_angle = m_nextCheckPointAngle;
-            }
-            else
-            {
+                m_dist = m_coords.distance(m_coordsTarget);
+            else         
                 m_lastTarget = m_coordsTarget;
+        }
+        void nextTarget(){
+            int index = 0;
+            if(m_targetsCoords.size() > 0){
+                for(int i = 0; i < m_targetsCoords.size(); i++){
+                    if(m_targetsCoords[i].x() == m_coordsTarget.x() 
+                        && m_targetsCoords[i].y() == m_coordsTarget.y())
+                            index = i+1;
+                }
             }
             
+            if(m_targetsCoords[index].x() > 0 && m_targetsCoords[0].x() == m_coordsTarget.x())
+                m_lap = 1; 
+            
+            if(m_lap && m_nextCheckPointDist <= 1450){
+                if(index >= m_targetsCoords.size())
+                    index = 0;
+                
+                if(m_timeout >= 65){
+                    m_coordsTarget.setVector2D(m_targetsCoords[index].x(), m_targetsCoords[index].y());
+                    rotate(m_targetsCoords[index]);
+                }
+            }  
+        }
+        void checkTargets(){
+            if(!m_lap){
+                if(m_targetsCoords.size() < 1)
+                    m_targetsCoords.push_back(m_coordsTarget);
+                else{
+                    bool existCoord = false;
+                    for(auto &p : m_targetsCoords){
+                        if(p.x() == m_coordsTarget.x())
+                            existCoord = true;
+                    }
+                    if(!existCoord)
+                        m_targetsCoords.push_back(m_coordsTarget);
+                }
+            }
+        }
+        void changeTarget(){
+            if(m_actualTarget.x() == 0 && m_actualTarget.y() == 0)
+                m_actualTarget.setVector2D(m_coordsTarget.x(), m_coordsTarget.y());
+
+            if(m_actualTarget.x() == m_coordsTarget.x())
+                m_timeout--;
+            else{
+                m_timeout = 100;
+                m_actualTarget.setVector2D(m_coordsTarget.x(), m_coordsTarget.y());
+                setLap();
+            }
+        }
+        void setLap(){
+            if(m_lap)
+                if(m_targetsCoords[m_targetsCoords.size()-1].x() == m_coordsTarget.x())
+                    m_lap++;
+        }
+        float getAngle(Vector2D p) {
+            float d = m_coords.distance(p);
+            float dx = 0;
+            float dy = 0;
+            cerr << d << endl;
+            if(p.x() > m_x)
+                dx = (p.x() - m_x) / d;
+            else
+                dx = (m_x - p.x()) / d;
+            
+            if(p.y() > m_y)
+                dy = (p.y() - m_y) / d;
+            else
+                dy = (m_y - p.y()) / d;
+            cerr << dx << endl;
+            cerr << dy << endl;
+            // Trigonométrie simple. On multiplie par 180.0 / PI pour convertir en degré.
+            float a = acos(dx) * 180.0 / PI;
+            cerr << a << endl;
+            // Si le point qu'on veut est en dessus de nous, il faut décaler l'angle pour qu'il soit correct.
+            if (dy < 0) {
+                a = 360.0 - a;
+            }
+            cerr << a << endl;
+            return a;
+        }
+        float diffAngle(Vector2D p) {
+            float a = getAngle(p);
+            // Pour connaitre le sens le plus proche, il suffit de regarder dans les 2 sens et on garde le plus petit
+            float right = m_angle <= a ? a - m_angle : 360.0 - m_angle + a;
+            float left = m_angle >= a ? m_angle - a : m_angle + 360.0 - a;
+        
+            if(right < left)
+                return right;
+            else // On donne un angle négatif s'il faut tourner à gauche
+                return -left;
+        }
+        void rotate(Vector2D p) {
+            float a = diffAngle(p);        
+            // On ne peut pas tourner de plus de 18° en un seul tour
+            if (a > 18.0)
+                a = 18.0;
+            else if (a < -18.0)
+                a = -18.0;  
+
+            m_angle += a;
+
+            // L'opérateur % est lent. Si on peut l'éviter, c'est mieux.
+            if (m_angle >= 360.0)
+                m_angle = m_angle - 360.0;
+            else if (m_angle < 0.0)
+                m_angle += 360.0;
         }
         void goBoost(int x, int y)
         {
-            if(m_nextCheckPointDist >= 6500 && m_boost)
+            Vector2D enemy(x,y);
+            if(m_nextCheckPointDist >= 6500 && m_boost && m_lap)
             {
-                if(m_nextCheckPointAngle <= 10 && m_nextCheckPointAngle >= -10)
+                if(m_angle <= 10 && m_angle >= -10)
                 {
                     cout << (int)m_coords.x() << " " << (int)m_coords.y() << " " << "BOOST" << endl;
                     m_boost = false;
                 }
             }
+            /*else if(m_coords.distance(enemy) < 800 && m_boost && m_lap){
+                cout << (int)x << " " << (int)y << " " << "BOOST" << endl;
+                    m_boost = false;
+            }*/
             
-        }
-        void output(int x, int y)
-        {
-            if(m_boost)
-                goBoost(x,y);
-            cout << (int)m_coords.x() << " " << (int)m_coords.y() << " " << m_thrust << endl;
-        }
+        }        
 };
 
 

@@ -125,11 +125,11 @@ class Vector2D
             return *this;
         }
         //permet de trouve le point le plus proche sur une droite depuis un point
-        Vector2D* closest(Vector2D a, Vector2D b) {
+        static Vector2D closest(Vector2D a, Vector2D b) {
             float da = b.m_y - a.m_y;
             float db = a.m_x - b.m_x;
             float c1 = da*a.m_x + db*a.m_y;
-            float c2 = -db*m_x + da*m_y;
+            float c2 = -db*b.m_x + da*b.m_y;
             float det = da*da + db*db;
             float cx = 0;
             float cy = 0;
@@ -139,11 +139,11 @@ class Vector2D
                 cy = (da*c2 + db*c1) / det;
             } else {
                 // Le point est déjà sur la droite
-                cx = m_x;
-                cy = m_y;
+                cx = a.m_x;
+                cy = a.m_y;
             }
         
-            return new Vector2D(cx, cy);
+            return Vector2D(cx, cy);
         }
 };
 
@@ -197,6 +197,7 @@ class MyPod : public Pod
         
         int m_thrust;
         bool m_boost;
+        bool m_shield;
     public:
         MyPod() : Pod() //appelle du constructeur Pod
         {         
@@ -207,6 +208,7 @@ class MyPod : public Pod
             m_nextCheckPointAngle = 0.0;
             m_thrust = 100;
             m_boost = true;
+            m_shield = true;
         }
         ~MyPod(){}
         //init Pod avec les entrées
@@ -258,9 +260,9 @@ class MyPod : public Pod
         //check la distance vers la cible et met la poussé
         void checkDistance()
         {            
-            if(m_nextCheckPointDist > 2300)
+            if(m_dist > 2300)
                 m_thrust = 100, checkAngle();
-            else if(m_nextCheckPointDist <= 2300 && m_nextCheckPointDist > 1400)
+            else if(m_dist <= 2300 && m_dist > 1400)
                 m_thrust = 75, checkAngle();
             else
                 m_thrust = 45, checkAngle();
@@ -271,7 +273,7 @@ class MyPod : public Pod
             calculSpeed();
             calculDist();
             checkDistance();   
-            changeTarget();
+            targetChecked();
             nextTarget();
             
         }
@@ -297,7 +299,7 @@ class MyPod : public Pod
         {       
             //coeff friction
             float friction = 0.85;
-            //tours entre coords actuelle et les anciennes 
+            //tours entre coords actuelles et les anciennes 
             int rd = 2;
             if(m_coords.x() != m_lastCoords.x() || m_coords.y() != m_lastCoords.y())
             {
@@ -359,7 +361,7 @@ class MyPod : public Pod
             }
         }
         //check si on a passé un checkpoint et réinit du timeout
-        void changeTarget(){
+        void targetChecked(){
             if(m_actualTarget.x() == 0 && m_actualTarget.y() == 0)
                 m_actualTarget.setVector2D(m_coordsTarget.x(), m_coordsTarget.y());
 
@@ -379,18 +381,20 @@ class MyPod : public Pod
         }
         float getAngle(Vector2D p) {
             float d = m_coords.distance(p);
+            float x = m_coords.x();
+            float y = m_coords.y();
             float dx = 0;
             float dy = 0;
             cerr << d << endl;
-            if(p.x() > m_x)
-                dx = (p.x() - m_x) / d;
+            if(p.x() > x)
+                dx = (p.x() - x) / d;
             else
-                dx = (m_x - p.x()) / d;
+                dx = (x - p.x()) / d;
             
-            if(p.y() > m_y)
-                dy = (p.y() - m_y) / d;
+            if(p.y() > y)
+                dy = (p.y() - y) / d;
             else
-                dy = (m_y - p.y()) / d;
+                dy = (y - p.y()) / d;
             cerr << dx << endl;
             cerr << dy << endl;
             // Trigonométrie simple. On multiplie par 180.0 / PI pour convertir en degré.
@@ -430,6 +434,21 @@ class MyPod : public Pod
             else if (m_angle < 0.0)
                 m_angle += 360.0;
         }
+        void impactEnemy(int x, int y){
+            int mTop = m_coords.y() + 250,
+            mBottom = m_coords.y() - 250,
+            mLeft = m_coords.x() - 250,
+            mRight = m_coords.x() + 250;
+            
+            int eTop = y + 250,
+            eBottom = y - 250,
+            eLeft = x - 250,
+            eRight = x + 250; 
+            if(mLeft >= eRight && mRight <= eLeft){
+                cout << (int)m_coords.x() << " " << (int)m_coords.y() << " " << "SHIELD" << endl;
+                    m_shield = false;
+            }
+        }
         void goBoost(int x, int y)
         {
             Vector2D enemy(x,y);
@@ -441,10 +460,7 @@ class MyPod : public Pod
                     m_boost = false;
                 }
             }
-            /*else if(m_coords.distance(enemy) < 800 && m_boost && m_lap){
-                cout << (int)x << " " << (int)y << " " << "BOOST" << endl;
-                    m_boost = false;
-            }*/
+            impactEnemy(x,y);
             
         }        
 };
@@ -469,8 +485,7 @@ int main()
         
         int opponentX;
         int opponentY;
-        cin >> opponentX >> opponentY; cin.ignore();
-        //cerr << "opponentX : " << opponentX << " , opponentY : " << opponentY << endl;        
+        cin >> opponentX >> opponentY; cin.ignore();       
         maboul->output(opponentX, opponentY);
     }
 }

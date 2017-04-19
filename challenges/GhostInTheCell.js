@@ -20,7 +20,7 @@ class Unit{
         this.userId = 0;
         this.cyborgs = 0;
         this.production = 0;
-        this.initial = false;        
+        this.initial = false;
         this.parentDist = {};
         this.childrenDist = {};
     }
@@ -29,14 +29,13 @@ class Node extends Unit{
     constructor(id){
         super(id);
         this.parents = [];
-        this.children = [];
-        
+        this.children = [];    
     }
 };
 class Tree{
     constructor(root){
         if(root === undefined)
-            this._root = null;    
+            this._root = null;
         else
             this._root = root;
     };
@@ -52,7 +51,7 @@ class Tree{
         var child = new Node(childId);
         child.parentDist[rootNode.id] = distance;
         child.parents.push(rootNode);
-        
+
         rootNode.children.push(child);
         rootNode.childrenDist[child.id] = distance;
     };
@@ -110,11 +109,11 @@ class Tree{
             }else{
                 //look if _c exist
                 if(this.searchDirectChild(_c.id, _p) === null){
-                    _p.children.push(_c);           
+                    _p.children.push(_c);
                     _p.childrenDist[_c.id] = distance;
                 }
                 if(this.searchDirectParents(_p.id, _c) === null){
-                    _c.parents.push(_p);           
+                    _c.parents.push(_p);
                     _c.parentDist[_p.id] = distance;
                 }
             }
@@ -123,7 +122,7 @@ class Tree{
                 _p = new Node(parentId);
                 _p.children.push(_c);
                 _p.childrenDist[_c.id] = distance;
-        
+
                 _c.parents.push(_p);
                 _c.parentDist[_p.id] = distance;
             }
@@ -169,7 +168,7 @@ class Tree{
 }
 class Attack{
     constructor(trees){
-      this.trees = trees; 
+      this.trees = trees;
       this.troops = null;
       this.enemyTroops = null;
       this.bomb = {1: false};
@@ -177,7 +176,7 @@ class Attack{
     rebuildTree(node){
         if(node.userId == 1){
             var t = new Tree(node);
-            
+
         }
     };
     findClosestChild(nod, listeNode = []){
@@ -188,7 +187,7 @@ class Attack{
             node = nod;
         if(node == null)
             return rep;
-        
+
         if(node.userId == 1){
             var nodeC = parseInt(node.cyborgs);
             if(this.enemyTroops !== null){
@@ -197,11 +196,11 @@ class Attack{
             }
             if(node.production < 3 && nodeC > 10)
                 rep += ";"+this.increaseFactory(node)
-                
+
             list = sort(node.childrenDist);
-            for(var i = 0; i < list.length; i++){                    
+            for(var i = 0; i < list.length; i++){
                 var n = this.tree.searchDirectChild(list[i][0], node);
-                var nC = 0;                    
+                var nC = 0;
                 if(n.userId == -1){
                     if(BOMB > 0 && parseInt(n.cyborgs) > nodeC){
                         rep += "; BOMB "+node.id+" "+n.id;
@@ -215,7 +214,7 @@ class Attack{
                     if(nC < nodeC && nodeC > 0){
                         var c = nC+1;
                         node.cyborgs -= c;
-                        rep += ";MOVE "+ node.id+" "+n.id+" "+ c;  
+                        rep += ";MOVE "+ node.id+" "+n.id+" "+ c;
                     }
                 }
                 if(n.userId === 0){
@@ -228,14 +227,14 @@ class Attack{
                     node.cyborgs -= c;
                     if(c > 0){
                         if(nC < nodeC && nodeC > 0){
-                            rep += ";MOVE "+ node.id+" "+n.id+" "+ c;  
+                            rep += ";MOVE "+ node.id+" "+n.id+" "+ c;
                         }
                     }
                 }
             }
         }
         return rep;
-        
+
     };
     increaseFactory(node){
         var rep = "WAIT";
@@ -261,8 +260,8 @@ class Attack{
         this.trees.map((tree)=>{
             this.tree = tree;
             rep += (this.findClosestChild())+";";
-        });       
-        
+        });
+
         rep = rep.split(";")
         if(rep.length > 1){
             rep.map((v)=>{
@@ -288,7 +287,7 @@ for (var i = 0; i < linkCount; i++) {
         dist[factory1] = [];
     if(!dist.hasOwnProperty(factory2))
         dist[factory2] = []
-        
+
     dist[factory1].push({key: factory2, dist: distance});
     dist[factory2].push({key: factory1, dist: distance});
 }
@@ -353,7 +352,7 @@ while (true) {
             };
         }
     }
-    
+
     var attack = new Attack(trees);
     attack.addTroop(troop);
     attack.addEnemyTroop(enemyTroop);

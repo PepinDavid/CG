@@ -136,16 +136,18 @@ enum MODULES { START_POS, SAMPLES, DIAGNOSIS, MOLECULES, LABORATORY, WAIT };
                     return 1;
                 else if(size >= 2 || size < 3)
                     return 2;
-            }else if(r > 4 && r <= 10){
+            }else if(r > 4 && r <= 6){
                 if(size < 1)
                     return 1;
                 else if(size >= 1 || size < 3)
                     return 2;
-            }else{
+            }else if(r > 6 && r <= 8){
                 if(size < 2)
                     return 2;
                 else if(size >= 2 || size < 3)
                     return 3;
+            }else{
+                return 3;
             }
         }
         //set array for catch all letters is possible
@@ -208,14 +210,13 @@ enum MODULES { START_POS, SAMPLES, DIAGNOSIS, MOLECULES, LABORATORY, WAIT };
             if(enoughMols())
                 resp = "GOTO LABORATORY";
             else{
-                if(sizeMySamples() < 2)
-                    resp = "GOTO SAMPLES";
-                else if(getSampleIdDiag() > -1 && sizeMySamples() < 3)
+                if(getSampleIdDiag() > -1 && sizeMySamples() < 3)
                     resp = "CONNECT " + to_string(getSampleIdDiag());
+                else if(sizeMySamples() < 1)
+                    resp = "GOTO SAMPLES";
                 else
                     resp = "GOTO MOLECULES";
             }
-
             return resp;
         }
         string actionMolecules(){
@@ -237,7 +238,10 @@ enum MODULES { START_POS, SAMPLES, DIAGNOSIS, MOLECULES, LABORATORY, WAIT };
                 if(resp.size() > 1 && sizeMySamples() < 3)
                     return resp;
                 else{
-                    resp = "GOTO SAMPLES";
+                    if(sizeMySamples() > 2)
+                        resp = "WAIT";
+                    else
+                        resp = "GOTO SAMPLES";
                     return resp;
                 }
             }
@@ -296,7 +300,7 @@ enum MODULES { START_POS, SAMPLES, DIAGNOSIS, MOLECULES, LABORATORY, WAIT };
             for(auto mol: mols){
                 if(mol.second > 0){
                     cerr << "letters avail diag " << mol.first << " :" << _availMols[mol.first] + _storeMolsExp[mol.first] << " >= " << mol.second << endl;
-                    if(_availMols[mol.first] + _storeMolsExp[mol.first] <= mol.second)
+                    if(mol.second > _availMols[mol.first] + _storeMolsExp[mol.first])
                         isCheck = true;
                     else{
                         isCheck = false;

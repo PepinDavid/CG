@@ -46,6 +46,7 @@ enum MODULES { START_POS, SAMPLES, DIAGNOSIS, MOLECULES, LABORATORY, WAIT };
         int _score;
         map<string, int> _storeMolsExp;
         map<string, int> _storeMols;
+        map<string, int> _availMols;
         vector<Sample> _samples;
         vector<string> _lettersMols;
         bool _diag = false;
@@ -69,43 +70,6 @@ enum MODULES { START_POS, SAMPLES, DIAGNOSIS, MOLECULES, LABORATORY, WAIT };
         void setSample(vector<Sample> const &samples){
                 _samples = samples;
         }
-        void setMolsType(map<string, int> &availMols){
-            int sum = accumulate(begin(_storeMols), end(_storeMols), 0, [](int value , const map<string, int>::value_type& p){return value+p.second;});
-            if(sum < MAX_MOLECULE){
-                for(int i = 0; i < _samples.size(); ++i){
-                    if(_samples[i].idPlayer == 0){
-                        cerr << _samples[i].sampleId << endl;
-                        //debugMols(_samples[i].mols);
-                        if(!compareMols(_samples[i].mols)){
-                            for(auto mol: _samples[i].mols){
-                                int reste = (mol.second - _storeMolsExp[mol.first] > 0)?(mol.second - _storeMolsExp[mol.first]): (_storeMolsExp[mol.first]-mol.second);
-                                if(availMols[mol.first] >= reste && _storeMolsExp[mol.first] < mol.second){
-                                    cerr << "letters " << mol.first << " :" << availMols[mol.first] << " >= " << (mol.second - _storeMolsExp[mol.first]) << " && " << _storeMolsExp[mol.first] << " < " << mol.second << endl;
-                                    //cerr << "letters : " << mol.first << endl;
-                                    (availMols[mol.first] - mol.second > 0)? availMols[mol.first] -= mol.second: availMols[mol.first] = 0;
-                                    _lettersMols.push_back(mol.first);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        string getMolsType(){
-            for(auto l: _lettersMols){
-                return l;
-            }
-            return "";
-        }
-        int getSampleId() {
-            for(int i = 0; i < _samples.size(); ++i){
-                if(_samples[i].costTotal < 0 && _samples[i].idPlayer == 0 && sizeMySamples() >= 3)
-                    return _samples[i].sampleId;
-                else if(_samples[i].costTotal > 0 && _samples[i].idPlayer == -1 && sizeMySamples() < 3)
-                    return _samples[i].sampleId;
-            }
-            return -1;
-        }
         void updateSample(const vector<Sample> &samp){
             for(int j = 0; j < samp.size(); ++j){
                 for(int i = 0; i < _samples.size(); ++i){
@@ -115,6 +79,43 @@ enum MODULES { START_POS, SAMPLES, DIAGNOSIS, MOLECULES, LABORATORY, WAIT };
                 }
             }
         }
+        void updateAvailMols(map<string, int> &availMols){
+            _availMols = availMols;
+        }
+        //if target diagnosis
+        bool isNotDiag(){
+            for(int i = 0; i < _samples.size(); ++i){
+                if(_samples[i].costTotal < 0 && _samples[i].idPlayer == 0){
+                    return true;
+                }
+            }
+            return false;
+        }
+        //for diagnosis samples
+        int getSampleId() {
+            for(int i = 0; i < _samples.size(); ++i){
+                if(_samples[i].costTotal < 0 && _samples[i].idPlayer == 0)
+                    return _samples[i].sampleId;
+            }
+            return -1;
+        }
+        int getSampleIdDiag() {
+            for(int i = 0; i < _samples.size(); ++i){
+                if(compareAvailMols(_samples[i].mols) && _samples[i].idPlayer == -1)
+                    return _samples[i].sampleId;
+            }
+            return -1;
+        }
+        //eject samples not possbile
+        int getSampleIdImpossible(){
+            for(int i = 0; i < _samples.size(); ++i){
+                cerr << "sample id " << _samples[i].sampleId << endl;
+                if(_samples[i].idPlayer == 0 && compareAvailDiag(_samples[i].mols))
+                    return _samples[i].sampleId;
+            }
+            return -1;
+        }
+        //find sample in laboratory for eject it
         int getSampleChooseId(){
             for(int i = 0; i < _samples.size(); ++i){
                 if( _samples[i].idPlayer == 0){
@@ -124,6 +125,7 @@ enum MODULES { START_POS, SAMPLES, DIAGNOSIS, MOLECULES, LABORATORY, WAIT };
             }
             return -1;
         }
+        //get samples by rank and experience mols
         int getSampleRank() {
             int size = _samples.size();
             int r = betterRank();
@@ -146,6 +148,35 @@ enum MODULES { START_POS, SAMPLES, DIAGNOSIS, MOLECULES, LABORATORY, WAIT };
                     return 3;
             }
         }
+        //set array for catch all letters is possible
+        void setMolsType(){
+            int sum = accumulate(begin(_storeMols), end(_storeMols), 0, [](int value , const map<string, int>::value_type& p){return value+p.second;});
+            if(sum < MAX_MOLECULE){
+                for(int i = 0; i < _samples.size(); ++i){
+                    if(_samples[i].idPlayer == 0){
+                        cerr << _samples[i].sampleId << endl;
+                        //debugMols(_samples[i].mols);
+                        if(!compareMols(_samples[i].mols)){
+                            for(auto mol: _samples[i].mols){
+                                int reste = (mol.second - _storeMolsExp[mol.first] > 0)?(mol.second - _storeMolsExp[mol.first]): (_storeMolsExp[mol.first]-mol.second);
+                                if(_availMols[mol.first] >= reste && _storeMolsExp[mol.first] < mol.second){
+                                    //cerr << "letters " << mol.first << " :" << _availMols[mol.first] << " >= " << (mol.second - _storeMolsExp[mol.first]) << " && " << _storeMolsExp[mol.first] << " < " << mol.second << endl;
+                                    //(_availMols[mol.first] - mol.second > 0)? _availMols[mol.first] -= mol.second: _availMols[mol.first] = 0;
+                                    _lettersMols.push_back(mol.first);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        string getMolsType(){
+            for(auto l: _lettersMols){
+                return l;
+            }
+            return "";
+        }
+        //look if have enough mmols for sample
         bool enoughMols(){
             for(int i = 0; i < _samples.size(); ++i){
                 if(_samples[i].idPlayer == 0){
@@ -155,6 +186,7 @@ enum MODULES { START_POS, SAMPLES, DIAGNOSIS, MOLECULES, LABORATORY, WAIT };
             }
             return false;
         }
+        //size vector of my samples
         int sizeMySamples(){
             int size = 0;
             for(int i = 0; i < _samples.size(); ++i){
@@ -163,84 +195,116 @@ enum MODULES { START_POS, SAMPLES, DIAGNOSIS, MOLECULES, LABORATORY, WAIT };
             }
             return size;
         }
-        int out(map<string, int> &availMols){
-            cerr << "target : " << _target << endl;
+        string actionDiag(){
+            string resp;
+            if(getSampleId() > -1 && isNotDiag()){
+                resp = "CONNECT " + to_string(getSampleId());
+                return resp;
+            }
+            if(getSampleIdImpossible() > -1){
+                resp =  "CONNECT " + to_string(getSampleIdImpossible());
+                return resp;
+            }
+            if(enoughMols())
+                resp = "GOTO LABORATORY";
+            else{
+                if(sizeMySamples() < 2)
+                    resp = "GOTO SAMPLES";
+                else if(getSampleIdDiag() > -1 && sizeMySamples() < 3)
+                    resp = "CONNECT " + to_string(getSampleIdDiag());
+                else
+                    resp = "GOTO MOLECULES";
+            }
 
+            return resp;
+        }
+        string actionMolecules(){
+            string resp;
+            if(getMolsType().size() > 0){
+                resp = "CONNECT " + getMolsType();
+                return resp;
+            }else{
+                for(int i = 0; i < _samples.size(); i++){
+                    if(_samples[i].idPlayer == 0){
+                        if(compareMols(_samples[i].mols) && _lettersMols.size() < 1)
+                            return "GOTO LABORATORY";
+                    }
+                }
+                if(getSampleIdImpossible() > -1){
+                    cerr << "get samples possible" << endl;
+                    resp =  "GOTO DIAGNOSIS";
+                }
+                if(resp.size() > 1 && sizeMySamples() < 3)
+                    return resp;
+                else{
+                    resp = "GOTO SAMPLES";
+                    return resp;
+                }
+            }
+        }
+        string actionLabo(){
+            string resp;
+            if(getSampleChooseId() > -1){
+                return "CONNECT " + to_string(getSampleChooseId());
+            }else{
+                sort(_samples.begin(), _samples.end(), sortByPlayerId);
+                for(int i = 0; i < _samples.size(); ++i){
+                    if(_samples[i].idPlayer == 0 && compareAvailMols(_samples[i].mols) ){
+                        return "GOTO MOLECULES";
+                    }
+                }
+                if(getSampleIdDiag() > -1){
+                    cerr << "get samples impossible" << endl;
+                    resp =  "GOTO DIAGNOSIS";
+                }
+                if(resp.size() > 1 && sizeMySamples() < 3)
+                    return resp;
+
+                return "GOTO SAMPLES";
+            }
+        }
+        int out(){
             if(_target == "START_POS")
                 return MODULES::SAMPLES;
-
             if(_eta > 0){
                 return MODULES::WAIT;
             }else if(_target == "SAMPLES" && sizeMySamples() < MAX_SAMPLE){
                 return -(MODULES::SAMPLES);
             }else if(_target == "SAMPLES" && sizeMySamples() >= MAX_SAMPLE){
                 return MODULES::DIAGNOSIS;
-            }else if(_target == "DIAGNOSIS" && !_diag){
-                _diag = true;
-                for(int i = 0; i < _samples.size(); ++i){
-                    cerr << "cost : " << _samples[i].costTotal << endl;
-                    if(_samples[i].costTotal < 0 && _samples[i].idPlayer == 0)
-                        _diag = false;
-                }
-                return -(MODULES::DIAGNOSIS);
-            }else if(_target == "DIAGNOSIS" && _diag){
+            }else if(_target == "DIAGNOSIS"){
                 return -(MODULES::DIAGNOSIS);
             }else if(_target == "MOLECULES"){
-                for(int i = 0; i < _samples.size(); i++){
-                    if(_samples[i].idPlayer == 0){
-                        cerr << "size lettersmols : " << _lettersMols.size() << endl;
-                        if(compareMols(_samples[i].mols) && _lettersMols.size() < 1)
-                            return MODULES::LABORATORY;
-                    }
-                }
                 return -(MODULES::MOLECULES);
             }else if(_target == "LABORATORY"){
-                vector<bool>index;
-                for(int i = 0; i < _samples.size(); ++i){
-                    if(_samples[i].idPlayer == 0){
-                        cerr << compareMols(_samples[i].mols) << endl;
-                        if(compareMols(_samples[i].mols))
-                            index.push_back(true);
-                    }
-                }
-                cerr << index.size() << endl;
-                if(index.size()>0)
-                    return -(MODULES::LABORATORY);
-
-                sort(_samples.begin(), _samples.end(), sortByPlayerId);
-                for(int i = 0; i < _samples.size(); ++i){
-                    if(_samples[i].idPlayer == 0){
-                        if(compareAvailMols(_samples[i].mols, availMols) ){
-                            return MODULES::MOLECULES;
-                        }
-                    }
-                }
-                if(sizeMySamples() < 1){
-                    _diag = false;
-                    return MODULES::SAMPLES;
-                }else{
-                    for(int i = 0; i < _samples.size(); ++i){
-                        if(_samples[i].idPlayer == -1){
-                            if(compareAvailMols(_samples[i].mols, availMols)){
-                                return MODULES::DIAGNOSIS;
-                            }
-                        }
-                    }
-                }
-                _diag = false;
-                return MODULES::SAMPLES;
+                return -(MODULES::LABORATORY);
             }
         }
     private:
-        bool compareAvailMols(map<string, int> &mols, map<string, int> &availMols){
-            if(mols["A"] <= (availMols["A"]+_storeMolsExp["A"])
-                && mols["B"] <= (availMols["B"]+_storeMolsExp["B"])
-                 && mols["C"] <= (availMols["C"]+_storeMolsExp["C"])
-                  && mols["D"] <= (availMols["D"]+_storeMolsExp["D"])
-                   && mols["E"] <= (availMols["E"]+_storeMolsExp["E"]))
+        bool compareAvailMols(map<string, int> &mols){
+            if(mols["A"] <= (_availMols["A"]+_storeMolsExp["A"])
+                && mols["B"] <= (_availMols["B"]+_storeMolsExp["B"])
+                 && mols["C"] <= (_availMols["C"]+_storeMolsExp["C"])
+                  && mols["D"] <= (_availMols["D"]+_storeMolsExp["D"])
+                   && mols["E"] <= (_availMols["E"]+_storeMolsExp["E"]))
                 return true;
             else
                 return false;
+        }
+        bool compareAvailDiag(map<string, int> &mols){
+            bool isCheck = false;
+            for(auto mol: mols){
+                if(mol.second > 0){
+                    cerr << "letters avail diag " << mol.first << " :" << _availMols[mol.first] + _storeMolsExp[mol.first] << " >= " << mol.second << endl;
+                    if(_availMols[mol.first] + _storeMolsExp[mol.first] <= mol.second)
+                        isCheck = true;
+                    else{
+                        isCheck = false;
+                        break;
+                    }
+                }
+            }
+            return isCheck;
         }
         bool compareMols(map<string, int> &mols){
             bool isCheck = false;
@@ -294,8 +358,8 @@ enum MODULES { START_POS, SAMPLES, DIAGNOSIS, MOLECULES, LABORATORY, WAIT };
         void setProjects(map<string, int> &projs){
             _projects.push_back(projs);
         }
-        void setMolsAvailable(map<string, int> &availMols){
-            _availableMols = availMols;
+        void setMolsAvailable(map<string, int> &_availMols){
+            _availableMols = _availMols;
         }
         void setRobots(int id, string target, int eta, int score, int storageA, int storageB, int storageC, int storageD, int storageE, int expertiseA, int expertiseB, int expertiseC, int expertiseD, int expertiseE){
             if(id == 0)
@@ -307,9 +371,10 @@ enum MODULES { START_POS, SAMPLES, DIAGNOSIS, MOLECULES, LABORATORY, WAIT };
             if(samp.size() > 0)
                 setAllSamples(samp);
             _me.updateSample(_availableSamples);
-            _me.setMolsType(_availableMols);
+            _me.updateAvailMols(_availableMols);
+            _me.setMolsType();
 
-            int resp = _me.out(_availableMols);
+            int resp = _me.out();
             switch (resp) {
                 case 1:
                     cout << "GOTO SAMPLES" << endl;
@@ -321,33 +386,19 @@ enum MODULES { START_POS, SAMPLES, DIAGNOSIS, MOLECULES, LABORATORY, WAIT };
                     cout << "GOTO DIAGNOSIS" << endl;
                     break;
                 case -2:
-                    if(_me.getSampleId() > -1)
-                        cout << "CONNECT " << _me.getSampleId() << endl;
-                    else{
-                        if(_me.enoughMols())
-                            cout << "GOTO LABORATORY" << endl;
-                        else
-                            cout << "GOTO MOLECULES" << endl;
-                    }
+                    cout << _me.actionDiag() << endl;
                     break;
                 case 3:
                     cout << "GOTO MOLECULES" << endl;
                     break;
                 case -3:
-                    if(_me.getMolsType().size() > 0)
-                        cout << "CONNECT " << _me.getMolsType() << endl;
-                    else{
-                        if(_me.sizeMySamples() > 1)
-                            cout << "GOTO LABORATORY" << endl;
-                        else
-                            cout << "GOTO SAMPLES" << endl;
-                    }
+                    cout << _me.actionMolecules() << endl;
                     break;
                 case 4:
                     cout << "GOTO LABORATORY" << endl;
                     break;
                 case -4:
-                        cout << "CONNECT " << _me.getSampleChooseId() << endl;
+                        cout << _me.actionLabo() << endl;
                     break;
                 case 5:
                     cout << "WAIT" << endl;
@@ -375,7 +426,7 @@ int main()
     // Game loop
     while (1) {
         vector<Sample> samples;
-        map<string, int> availMols;
+        map<string, int> _availMols;
         for (int i = 0; i < 2; i++) {
             string target;
             int eta;
@@ -400,8 +451,8 @@ int main()
         int availableD;
         int availableE;
         cin >> availableA >> availableB >> availableC >> availableD >> availableE; cin.ignore();
-        availMols = {{"A", availableA}, {"B", availableB}, {"C", availableC}, {"D", availableD}, {"E", availableE}};
-        game.setMolsAvailable(availMols);
+        _availMols = {{"A", availableA}, {"B", availableB}, {"C", availableC}, {"D", availableD}, {"E", availableE}};
+        game.setMolsAvailable(_availMols);
 
         int sampleCount;
         cin >> sampleCount; cin.ignore();

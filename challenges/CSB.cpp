@@ -1,3 +1,5 @@
+//note place ~3866/26 337
+
 #include <iostream>
 #include <string>
 #include <vector>
@@ -87,7 +89,7 @@ class Vector2D
         {
             float len = length();
             if(len > EPSILON){
-                float mult = desiredNorm/len; 
+                float mult = desiredNorm/len;
                 m_x *= mult; m_y *= mult;
                 return len;
             }
@@ -133,7 +135,7 @@ class Vector2D
             float det = da*da + db*db;
             float cx = 0;
             float cy = 0;
-        
+
             if (det != 0) {
                 cx = (da*c1 - db*c2) / det;
                 cy = (da*c2 + db*c1) / det;
@@ -142,7 +144,7 @@ class Vector2D
                 cx = a.m_x;
                 cy = a.m_y;
             }
-        
+
             return Vector2D(cx, cy);
         }
 };
@@ -157,9 +159,9 @@ class Pod : public Vector2D
     public:
         Pod()
         {
-            m_coords.setVector2D(0.0, 0.0);        
-            m_lastCoords.setVector2D(0.0, 0.0);     
-            
+            m_coords.setVector2D(0.0, 0.0);
+            m_lastCoords.setVector2D(0.0, 0.0);
+
         }
         ~Pod(){}
         void setPod(float x = 0.0, float y = 0.0)
@@ -170,7 +172,7 @@ class Pod : public Vector2D
 
 class MyPod : public Pod
 {
-    protected:        
+    protected:
         //coordonées de la cible
         Vector2D m_coordsTarget;
         //sert a checké si on est passé par un checkpoint
@@ -181,7 +183,7 @@ class MyPod : public Pod
         //angle vers la cible
         float m_angle;
         /*
-            distance vers la cible 
+            distance vers la cible
             un calcul est fait
             dist == m_nextCheckPointDist
         */
@@ -194,16 +196,16 @@ class MyPod : public Pod
         float m_nextCheckPointDist;
         //angle vers la cible données en entrée
         float m_nextCheckPointAngle;
-        
+
         int m_thrust;
         bool m_boost;
         bool m_shield;
     public:
         MyPod() : Pod() //appelle du constructeur Pod
-        {         
+        {
             m_coordsTarget.setVector2D(0.0, 0.0);
             m_speedInstant.setVector2D(0.0, 0.0);
-            m_actualTarget.setVector2D(0.0, 0.0);            
+            m_actualTarget.setVector2D(0.0, 0.0);
             m_nextCheckPointDist = 0.0;
             m_nextCheckPointAngle = 0.0;
             m_thrust = 100;
@@ -213,8 +215,8 @@ class MyPod : public Pod
         ~MyPod(){}
         //init Pod avec les entrées
         void setPod(float x = 0.0, float y = 0.0, float targetX = 0.0, float targetY = 0.0, float nextCheckPointD = 0.0, float nextCheckPointAngle = 0.0)
-        {            
-            Pod::setPod(x, y);            
+        {
+            Pod::setPod(x, y);
             m_coordsTarget.setVector2D(targetX, targetY);
             m_nextCheckPointDist = nextCheckPointD;
             m_nextCheckPointAngle = nextCheckPointAngle;
@@ -236,12 +238,12 @@ class MyPod : public Pod
             cerr << "Distance calculé : " << m_dist << endl;
             if(m_thrust < 30 && m_thrust > -30)
                 m_thrust = 30;
-                
+
             if(m_boost)
                 goBoost(x,y);
-                
+
             cout << (int)m_coords.x() << " " << (int)m_coords.y() << " " << abs(m_thrust) << endl;
-            
+
         }
     private:
         //check l'angle vers la cible et met la poussé
@@ -259,7 +261,7 @@ class MyPod : public Pod
         }
         //check la distance vers la cible et met la poussé
         void checkDistance()
-        {            
+        {
             if(m_dist > 2300)
                 m_thrust = 100, checkAngle();
             else if(m_dist <= 2300 && m_dist > 1400)
@@ -272,14 +274,14 @@ class MyPod : public Pod
         {
             calculSpeed();
             calculDist();
-            checkDistance();   
+            checkDistance();
             targetChecked();
             nextTarget();
-            
+
         }
         //recherche de la trajectoire
         void seek()
-        {            
+        {
             float m_speed = m_speedInstant.normal(),//normalisation du vecteur vitesse
             MAX_FORCE = (m_thrust / 100) + 2.0;//calcule de la force centrifuge
             Vector2D steering,//direction
@@ -296,22 +298,22 @@ class MyPod : public Pod
         }
         //calcul de la vitesse instannée
         void calculSpeed()
-        {       
+        {
             //coeff friction
             float friction = 0.85;
-            //tours entre coords actuelles et les anciennes 
+            //tours entre coords actuelles et les anciennes
             int rd = 2;
             if(m_coords.x() != m_lastCoords.x() || m_coords.y() != m_lastCoords.y())
             {
                 m_speedInstant.setVector2D((m_coords.x() - m_lastCoords.x()) / rd, (m_coords.y() - m_lastCoords.y()) / rd);
                 m_lastCoords.setVector2D(m_coords.x() * friction, m_coords.y() * friction);
-            }                                    
+            }
         }
         //calcul de la distance entre le Pod et la cible
         void calculDist(){
             if(m_coordsTarget.x() != m_lastTarget.x() || m_coordsTarget.y() != m_lastTarget.y())
                 m_dist = m_coords.distance(m_coordsTarget);
-            else         
+            else
                 m_lastTarget = m_coordsTarget;
         }
         //sert a visé le prochain checkpoint si on est assez près de celui
@@ -322,14 +324,14 @@ class MyPod : public Pod
                 for(int i = 0; i < m_targetsCoords.size(); i++){
                     //si les coordonnées du checkpoints correspondent a celles visées
                     //on sélectionne le prochain
-                    if(m_targetsCoords[i].x() == m_coordsTarget.x() 
+                    if(m_targetsCoords[i].x() == m_coordsTarget.x()
                         && m_targetsCoords[i].y() == m_coordsTarget.y())
                             index = i+1;
                 }
             }
             //ajout de 2 tours a lap vu que l'on commence a zéro
             if(m_targetsCoords[index].x() > 0 && m_targetsCoords[0].x() == m_coordsTarget.x())
-                m_lap = 2; 
+                m_lap = 2;
             //if on a déjà procédé a un tour et que l'on est proche du checkpoint visé
             //1450 est choisi comme valeur d'approche avec un checkpoint correspond a 600 et le Pod fait 400
             //avec la vitesse du pod lors de l'approche on ajoute 450
@@ -342,7 +344,7 @@ class MyPod : public Pod
                     m_coordsTarget.setVector2D(m_targetsCoords[index].x(), m_targetsCoords[index].y());
                     rotate(m_targetsCoords[index]);
                 }
-            }  
+            }
         }
         //ajout des checkpoints dans un tableau
         void checkTargets(){
@@ -390,7 +392,7 @@ class MyPod : public Pod
                 dx = (p.x() - x) / d;
             else
                 dx = (x - p.x()) / d;
-            
+
             if(p.y() > y)
                 dy = (p.y() - y) / d;
             else
@@ -412,19 +414,19 @@ class MyPod : public Pod
             // Pour connaitre le sens le plus proche, il suffit de regarder dans les 2 sens et on garde le plus petit
             float right = m_angle <= a ? a - m_angle : 360.0 - m_angle + a;
             float left = m_angle >= a ? m_angle - a : m_angle + 360.0 - a;
-        
+
             if(right < left)
                 return right;
             else // On donne un angle négatif s'il faut tourner à gauche
                 return -left;
         }
         void rotate(Vector2D p) {
-            float a = diffAngle(p);        
+            float a = diffAngle(p);
             // On ne peut pas tourner de plus de 18° en un seul tour
             if (a > 18.0)
                 a = 18.0;
             else if (a < -18.0)
-                a = -18.0;  
+                a = -18.0;
 
             m_angle += a;
 
@@ -439,11 +441,11 @@ class MyPod : public Pod
             mBottom = m_coords.y() - 250,
             mLeft = m_coords.x() - 250,
             mRight = m_coords.x() + 250;
-            
+
             int eTop = y + 250,
             eBottom = y - 250,
             eLeft = x - 250,
-            eRight = x + 250; 
+            eRight = x + 250;
             if(mLeft >= eRight && mRight <= eLeft){
                 cout << (int)m_coords.x() << " " << (int)m_coords.y() << " " << "SHIELD" << endl;
                     m_shield = false;
@@ -461,8 +463,8 @@ class MyPod : public Pod
                 }
             }
             impactEnemy(x,y);
-            
-        }        
+
+        }
 };
 
 
@@ -479,13 +481,13 @@ int main()
         int nextCheckpointY; // y position of the next check point
         int nextCheckpointDist; // distance to the next checkpoint
         int nextCheckpointAngle; // angle between your pod orientation and the direction of the next checkpoint
-        
+
         cin >> x >> y >> nextCheckpointX >> nextCheckpointY >> nextCheckpointDist >> nextCheckpointAngle; cin.ignore();
         maboul->setPod(x, y, nextCheckpointX, nextCheckpointY, nextCheckpointDist, nextCheckpointAngle);
-        
+
         int opponentX;
         int opponentY;
-        cin >> opponentX >> opponentY; cin.ignore();       
+        cin >> opponentX >> opponentY; cin.ignore();
         maboul->output(opponentX, opponentY);
     }
 }

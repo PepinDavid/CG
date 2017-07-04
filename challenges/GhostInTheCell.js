@@ -1,3 +1,5 @@
+//note place 1465/3507
+
 let GAMELOOP = 0;
 let BOMB = 2;
 let sort = (obj)=>{
@@ -29,7 +31,7 @@ class Node extends Unit{
     constructor(id){
         super(id);
         this.parents = [];
-        this.children = [];    
+        this.children = [];
     }
 };
 class Tree{

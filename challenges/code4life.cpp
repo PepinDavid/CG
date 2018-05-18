@@ -32,14 +32,24 @@ enum MODULES { START_POS, SAMPLES, DIAGNOSIS, MOLECULES, LABORATORY, WAIT };
      return a.costTotal > b.costTotal;
  };
  bool sortByRank(const Sample &a,const Sample &b){
-     return a.rank > b.rank;
+     return a.rank < b.rank;
  };
  bool sortByPlayerId(const Sample &a, const Sample &b){
      return a.idPlayer < b.idPlayer;
  };
  bool sortByLength(const int &a, const int &b){
    return a > b;
- }
+ };
+
+template<class InputIt, class T, class BinaryOperation>
+T accumulate(InputIt first, InputIt last, T init,
+             BinaryOperation op)
+{
+    for (; first != last; ++first) {
+        init = op(init, *first);
+    }
+    return init;
+};
  class Robot{
      private:
         int _id;
@@ -111,7 +121,6 @@ enum MODULES { START_POS, SAMPLES, DIAGNOSIS, MOLECULES, LABORATORY, WAIT };
         //eject samples not possbile
         int getSampleIdImpossible(){
             for(int i = 0; i < _samples.size(); ++i){
-                cerr << "sample id " << _samples[i].sampleId << endl;
                 if(_samples[i].idPlayer == 0 && compareAvailDiag(_samples[i].mols))
                     return _samples[i].sampleId;
             }
@@ -122,7 +131,7 @@ enum MODULES { START_POS, SAMPLES, DIAGNOSIS, MOLECULES, LABORATORY, WAIT };
             for(int i = 0; i < _samples.size(); ++i){
                 if( _samples[i].idPlayer == 0){
                     if(compareMols(_samples[i].mols))
-                        return _samples[i].sampleId;
+                        return i;
                 }
             }
             return -1;
@@ -158,7 +167,6 @@ enum MODULES { START_POS, SAMPLES, DIAGNOSIS, MOLECULES, LABORATORY, WAIT };
             if(sum < MAX_MOLECULE){
                 for(int i = 0; i < _samples.size(); ++i){
                     if(_samples[i].idPlayer == 0){
-                        cerr << _samples[i].sampleId << endl;
                         //debugMols(_samples[i].mols);
                         if(!compareMols(_samples[i].mols)){
                             for(auto mol: _samples[i].mols){
@@ -234,7 +242,6 @@ enum MODULES { START_POS, SAMPLES, DIAGNOSIS, MOLECULES, LABORATORY, WAIT };
                     }
                 }
                 if(getSampleIdImpossible() > -1){
-                    cerr << "get samples possible" << endl;
                     resp =  "GOTO DIAGNOSIS";
                 }
                 if(resp.size() > 1 && sizeMySamples() < 3)
@@ -251,7 +258,10 @@ enum MODULES { START_POS, SAMPLES, DIAGNOSIS, MOLECULES, LABORATORY, WAIT };
         string actionLabo(){
             string resp;
             if(getSampleChooseId() > -1){
-                return "CONNECT " + to_string(getSampleChooseId());
+                int itSamp = getSampleChooseId();
+                int idSamp = _samples[itSamp].sampleId;
+                _samples.erase(_samples.begin() + itSamp);
+                return "CONNECT " + to_string(idSamp);
             }else{
                 sort(_samples.begin(), _samples.end(), sortByPlayerId);
                 for(int i = 0; i < _samples.size(); ++i){
@@ -260,7 +270,6 @@ enum MODULES { START_POS, SAMPLES, DIAGNOSIS, MOLECULES, LABORATORY, WAIT };
                     }
                 }
                 if(getSampleIdDiag() > -1){
-                    cerr << "get samples impossible" << endl;
                     resp =  "GOTO DIAGNOSIS";
                 }
                 if(resp.size() > 1 && sizeMySamples() < 3)
@@ -301,7 +310,6 @@ enum MODULES { START_POS, SAMPLES, DIAGNOSIS, MOLECULES, LABORATORY, WAIT };
             bool isCheck = false;
             for(auto mol: mols){
                 if(mol.second > 0){
-                    cerr << "letters avail diag " << mol.first << " :" << _availMols[mol.first] + _storeMolsExp[mol.first] << " >= " << mol.second << endl;
                     if(mol.second > _availMols[mol.first] + _storeMolsExp[mol.first])
                         isCheck = true;
                     else{
@@ -417,7 +425,6 @@ int main()
     int projectCount;
     Game game;
     cin >> projectCount; cin.ignore();
-    cerr << "projectCount : " << projectCount << endl;
     for (int i = 0; i < projectCount; i++) {
         int a;
         int b;
@@ -461,8 +468,7 @@ int main()
         game.setMolsAvailable(_availMols);
 
         int sampleCount;
-        cin >> sampleCount; cin.ignore();
-        cerr << "samplecount " << sampleCount << endl;
+        cin >> sampleCount; cin.ignore()
         for (int i = 0; i < sampleCount; i++) {
             int sampleId;
             int carriedBy;
